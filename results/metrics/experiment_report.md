@@ -39,3 +39,26 @@
 
 The oracle is a non-causal expected-reward upper bound. Net profit uses
 sampled realized outcomes; pseudo-regret uses expected net reward.
+
+## Supplementary CTR-anchored robustness experiment
+
+We also fit logistic regression on the chronological training prefix and used its
+out-of-sample CTR prediction as a shared relevance prior for the synthetic DSP world.
+`click` remained a target only, never a routing feature or DSP reward.
+
+### CTR model
+
+| ROC-AUC | Log loss | Brier score | Observed CTR | Mean predicted CTR |
+|---:|---:|---:|---:|---:|
+| 0.6416 | 0.4492 | 0.1404 | 0.1766 | 0.1959 |
+
+### Routing at 40% mean capacity
+
+| Policy | Net profit | Pseudo-regret | Utilization | Violations |
+|---|---:|---:|---:|---:|
+| Greedy | 35330.8 ± 2685.8 | 8047.7 ± 6916.5 | 0.838 ± 0.221 | 0 |
+| LinUCB | 41985.9 ± 9069.1 | 1586.4 ± 225.0 | 0.995 ± 0.007 | 0 |
+| Random | 23291.9 ± 6542.8 | 20192.0 ± 2538.3 | 0.915 ± 0.002 | 0 |
+
+LinUCB's mean profit was 80.3% above Random in this robustness experiment. DSP
+outcomes remain synthetic and three seeds do not support a production-uplift claim.

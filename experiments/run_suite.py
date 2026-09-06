@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -43,6 +44,65 @@ DRIFT_METRICS = BASE_METRICS + (
     "post_drift_net_profit",
     "post_drift_pseudo_regret",
 )
+
+
+def append_ctr_results(lines: list[str], metrics_dir: Path) -> None:
+    """Add the optional CTR-anchored experiment when its outputs are present."""
+
+    metrics_path = metrics_dir / "ctr_model_metrics.json"
+    summary_path = metrics_dir / "ctr_anchored_summary.csv"
+    if not metrics_path.is_file() or not summary_path.is_file():
+        return
+
+    ctr = json.loads(metrics_path.read_text(encoding="utf-8"))
+    routing = pd.read_csv(summary_path)
+    lines.extend(
+        [
+            "",
+            "## Supplementary CTR-anchored robustness experiment",
+            "",
+            "We also fit logistic regression on the chronological training prefix",
+            "and used its out-of-sample CTR prediction as a shared relevance prior",
+            "for the synthetic DSP world. `click` remained a target only, never a",
+            "routing feature or DSP reward.",
+            "",
+            "### CTR model",
+            "",
+            "| ROC-AUC | Log loss | Brier score | Observed CTR | Mean predicted CTR |",
+            "|---:|---:|---:|---:|---:|",
+            f"| {ctr['roc_auc']:.4f} | {ctr['log_loss']:.4f} | "
+            f"{ctr['brier_score']:.4f} | {ctr['observed_ctr']:.4f} | "
+            f"{ctr['mean_predicted_ctr']:.4f} |",
+            "",
+            "### Routing at 40% mean capacity",
+            "",
+            "| Policy | Net profit | Pseudo-regret | Utilization | Violations |",
+            "|---|---:|---:|---:|---:|",
+        ]
+    )
+    for row in routing.sort_values("policy").itertuples():
+        lines.append(
+            f"| {row.policy} | {row.net_profit_mean:.1f} ± "
+            f"{row.net_profit_std:.1f} | {row.pseudo_regret_mean:.1f} ± "
+            f"{row.pseudo_regret_std:.1f} | "
+            f"{row.capacity_utilization_mean:.3f} ± "
+            f"{row.capacity_utilization_std:.3f} | "
+            f"{row.capacity_violations_max:.0f} |"
+        )
+    indexed = routing.set_index("policy")
+    if {"LinUCB", "Random"}.issubset(indexed.index):
+        relative = 100.0 * (
+            indexed.loc["LinUCB", "net_profit_mean"]
+            - indexed.loc["Random", "net_profit_mean"]
+        ) / indexed.loc["Random", "net_profit_mean"]
+        lines.extend(
+            [
+                "",
+                f"LinUCB's mean profit was {relative:.1f}% above Random in this",
+                "robustness experiment. DSP outcomes remain synthetic and three",
+                "seeds do not support a production-uplift claim.",
+            ]
+        )
 
 
 def capacity_limits(ratio: float, n_dsps: int, window_size: int) -> np.ndarray:
@@ -177,6 +237,7 @@ def write_report(
             "",
         ]
     )
+    append_ctr_results(lines, output_path.parent)
     output_path.write_text("\n".join(lines), encoding="utf-8")
 
 
