@@ -169,6 +169,84 @@ def generate_two_stage_world(
     )
 
 
+def generate_ctr_anchored_world(
+    features: object,
+    ctr_probabilities: object,
+    *,
+    n_dsps: int = 4,
+    seed: int = 42,
+    costs: np.ndarray | None = None,
+    drift_time: int | None = None,
+    drift_scale: float = 0.8,
+) -> CounterfactualWorld:
+    """Generate DSP responses around an out-of-sample Avazu CTR prior.
+
+    The CTR score represents shared request relevance. DSP-specific coefficients add
+    heterogeneous buying and value preferences. The observed Avazu click itself is
+    never used as a DSP reward.
+    """
+
+    if n_dsps <= 0:
+        raise ValueError("n_dsps must be positive.")
+    n_events, n_features = features.shape
+    prior = np.asarray(ctr_probabilities, dtype="float64").ravel()
+    if prior.shape != (n_events,):
+        raise ValueError("ctr_probabilities must contain one value per event.")
+    if not np.all(np.isfinite(prior)) or np.any((prior < 0) | (prior > 1)):
+        raise ValueError("ctr_probabilities must be finite values in [0, 1].")
+    if drift_time is not None and not 0 < drift_time < n_events:
+        raise ValueError("drift_time must be inside the event stream.")
+    if not 0.0 <= drift_scale <= 1.0:
+        raise ValueError("drift_scale must be between 0 and 1.")
+
+    rng = np.random.default_rng(seed)
+    scale = 0.25 / np.sqrt(max(n_features, 1))
+    buy_coefficients = rng.normal(0.0, scale, size=(n_features, n_dsps))
+    value_coefficients = rng.normal(0.0, scale, size=(n_features, n_dsps))
+    context_buy = np.asarray(features @ buy_coefficients, dtype="float64")
+    value_logits = np.asarray(features @ value_coefficients, dtype="float64")
+
+    if drift_time is not None:
+        affected = np.arange(0, n_dsps, 2)
+        for coefficients, logits in (
+            (buy_coefficients, context_buy),
+            (value_coefficients, value_logits),
+        ):
+            direction = rng.normal(0.0, scale, size=(n_features, len(affected)))
+            drifted = (
+                (1.0 - drift_scale) * coefficients[:, affected]
+                + drift_scale * direction
+            )
+            logits[drift_time:, affected] = np.asarray(
+                features[drift_time:] @ drifted, dtype="float64"
+            )
+
+    clipped_prior = np.clip(prior, 1e-5, 1.0 - 1e-5)
+    prior_logit = np.log(clipped_prior / (1.0 - clipped_prior))
+    dsp_offsets = np.linspace(-0.5, 0.5, n_dsps, dtype="float64")
+    buy_logits = prior_logit[:, None] + context_buy + dsp_offsets
+    buy_probability = 1.0 / (1.0 + np.exp(-np.clip(buy_logits, -30.0, 30.0)))
+
+    expected_if_bought = 1.0 + np.logaddexp(0.0, value_logits)
+    expected_gross = buy_probability * expected_if_bought
+    bought = rng.random(expected_gross.shape) < buy_probability
+    realized_if_bought = 1.0 + np.logaddexp(
+        0.0,
+        value_logits + rng.normal(0.0, 0.25, value_logits.shape),
+    )
+    realized_gross = bought * realized_if_bought
+    if costs is None:
+        costs = np.linspace(0.08, 0.22, n_dsps, dtype="float64")
+    costs = np.asarray(costs, dtype="float64")
+    if costs.shape != (n_dsps,) or np.any(costs < 0):
+        raise ValueError("costs must be non-negative with one value per DSP.")
+    return CounterfactualWorld(
+        expected_net_rewards=expected_gross - costs,
+        realized_gross_values=realized_gross,
+        costs=costs,
+    )
+
+
 class CapacityLimiter:
     """Enforce independent DSP capacities in fixed-size event windows."""
 

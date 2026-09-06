@@ -8,10 +8,16 @@ results/metrics/*
 !results/metrics/capacity_summary.csv
 !results/metrics/drift_summary.csv
 !results/metrics/experiment_report.md
+!results/metrics/ctr_model_metrics.json
+!results/metrics/ctr_anchored_raw.csv
+!results/metrics/ctr_anchored_summary.csv
+!results/metrics/ctr_anchored_report.md
 results/figures/*
 !results/figures/.gitkeep
 !results/figures/capacity_sweep.png
 !results/figures/drift_comparison.png
+!results/figures/ctr_calibration.png
+!results/figures/ctr_anchored_comparison.png
 work/
 tmp/
 *.pdf

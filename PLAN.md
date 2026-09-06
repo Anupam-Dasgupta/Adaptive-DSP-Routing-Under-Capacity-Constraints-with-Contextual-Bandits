@@ -115,6 +115,18 @@ includes capacity ratios 0.2/0.4/0.6 and discount factors
 - Rolling post-drift performance with an explicit recovery definition.
 - Interview-facing explanation and resume bullets only after measured results exist.
 
+### Optional extension — CTR-anchored DSP world (feature branch)
+
+- Fit logistic regression on the chronological training prefix using the existing
+  leakage-safe features.
+- Score only the later evaluation suffix and report ROC-AUC, log loss, Brier score,
+  and calibration.
+- Append the out-of-sample CTR score to the routing context and use it as a shared
+  relevance prior for heterogeneous synthetic DSPs.
+- Preserve the methodological boundary: `click` is a supervised target, never an
+  input feature or a DSP-specific reward.
+- Compare Random, Greedy, and LinUCB under paired seeds at 40% mean capacity.
+
 ## Scientific invariants
 
 1. Context order is chronological and never randomly shuffled.

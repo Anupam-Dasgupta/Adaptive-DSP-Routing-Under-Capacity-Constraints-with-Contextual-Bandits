@@ -18,6 +18,8 @@ The current implementation contains:
 - a leakage-safe, train-only-fitted feature pipeline with at most 64 sparse features;
 - reproducible linear and zero-inflated two-stage DSP worlds with optional abrupt
   drift;
+- an optional chronological logistic CTR model that anchors DSP response propensity
+  to an observed Avazu signal without using clicks as DSP rewards;
 - ForwardAll, seeded Random, contextual Greedy, LinUCB, and batched Discounted
   LinUCB policies;
 - shadow-price pacing backed by a non-negotiable hard per-window capacity limiter;
@@ -59,6 +61,7 @@ $env:PYTHONPATH = "src"
 python -m unittest discover -s tests -v
 python experiments/run_stationary.py --n-events 2000
 python experiments/run_drift.py --n-events 2000
+python experiments/run_ctr_anchored.py --n-events 5000 --seeds 42
 python experiments/run_suite.py
 ```
 
@@ -93,16 +96,30 @@ aggressive forgetting added variance faster than it helped adaptation in this se
 All 45 final policy runs had zero capacity violations. Full tables are in
 [`results/metrics/experiment_report.md`](results/metrics/experiment_report.md).
 
+The separate CTR-anchored experiment fits logistic regression on the first 20% of
+the chronological sample and evaluates it on the later 80%. Its out-of-sample CTR
+score is appended to the routing context and used as the shared relevance prior in
+the DSP simulator. The observed click remains an evaluation label only and is never
+a DSP reward. Results are written to
+[`results/metrics/ctr_anchored_report.md`](results/metrics/ctr_anchored_report.md).
+On 80,000 held-out events, the CTR model reached 0.6416 ROC-AUC, 0.4492 log
+loss, and 0.1404 Brier score. It modestly overpredicted the observed 17.66% CTR
+(mean prediction 19.59%). Across three paired synthetic DSP seeds at 40% mean
+capacity, LinUCB produced 80.3% more mean net profit than Random with zero capacity
+violations. This is a robustness result in a semi-synthetic world, not production
+uplift.
+
 ![Capacity sweep](results/figures/capacity_sweep.png)
 
 ![Abrupt drift comparison](results/figures/drift_comparison.png)
 
 ## Methodological boundary
 
-`click` is retained only as source-data metadata. It is never a feature and never a
-DSP reward. The online policy sees outcomes only for DSPs to which it routed the
-request. The simulator may retain the full counterfactual reward matrix solely for
-paired evaluation and the non-causal oracle benchmark.
+`click` is never a feature and never a DSP reward. The baseline ignores it; the
+CTR-anchored extension uses it only as the supervised target and evaluation label.
+The online policy sees outcomes only for DSPs to which it routed the request. The
+simulator may retain the full counterfactual reward matrix solely for paired
+evaluation and the non-causal oracle benchmark.
 
 The small JSON files produced by the stationary and drift commands are smoke-test
 outputs. Only the multi-seed suite supports the findings above.
@@ -111,11 +128,13 @@ outputs. Only the multi-seed suite supports the findings above.
 
 ```text
 src/adaptive_dsp_routing/data.py        loading, ordering, feature pipeline
+src/adaptive_dsp_routing/ctr.py         chronological CTR baseline and prior
 src/adaptive_dsp_routing/simulator.py   synthetic worlds and hard capacity
 src/adaptive_dsp_routing/policies.py    baselines, linear bandits, pacing
 src/adaptive_dsp_routing/evaluation.py  runner, oracle, metrics
 src/adaptive_dsp_routing/plotting.py    Matplotlib comparison plots
 experiments/                            runnable stationary and drift checks
 experiments/run_suite.py                paired resume experiment suite
+experiments/run_ctr_anchored.py         data-anchored robustness experiment
 tests/                                  scientific invariants
 ```

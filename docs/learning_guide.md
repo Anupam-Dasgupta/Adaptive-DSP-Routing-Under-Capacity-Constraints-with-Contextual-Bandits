@@ -124,3 +124,11 @@ without notes:
 
 If you can answer those questions and make a small code change without assistance,
 you understand enough to discuss the project honestly in an interview.
+
+## Optional CTR-anchored extension
+
+After the core seven days, read `ctr.py` and `run_ctr_anchored.py`. Be able to explain
+why `click` is valid as the supervised model's target but invalid as an input feature
+or as the reward for every DSP. Also explain why chronological out-of-sample
+predictions avoid future-label leakage and why calibration matters when a predicted
+probability becomes an input to a downstream decision system.

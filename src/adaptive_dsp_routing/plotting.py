@@ -5,11 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Mapping, Sequence
 
-import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import pandas as pd
 
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
 from .evaluation import EpisodeResult
+from .ctr import CTRModelResult
 
 
 def plot_comparison(
@@ -101,6 +105,42 @@ def plot_seed_traces(
     axes[1].set_title("Cumulative pseudo-regret across paired seeds")
     axes[1].set_ylabel("Pseudo-regret")
     axes[1].set_xlabel("Evaluation event")
+    figure.tight_layout()
+    figure.savefig(destination, dpi=150)
+    plt.close(figure)
+    return destination
+
+
+def plot_ctr_calibration(
+    result: CTRModelResult, output_path: str | Path
+) -> Path:
+    """Plot out-of-sample predicted CTR against observed click frequency."""
+
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    figure, axis = plt.subplots(figsize=(6, 6))
+    upper = min(
+        1.0,
+        1.1
+        * max(
+            float(result.mean_predicted.max()),
+            float(result.fraction_positive.max()),
+        ),
+    )
+    axis.plot([0, upper], [0, upper], color="black", linestyle="--", label="ideal")
+    axis.plot(
+        result.mean_predicted,
+        result.fraction_positive,
+        marker="o",
+        label="logistic CTR model",
+    )
+    axis.set_title("Chronological CTR calibration")
+    axis.set_xlabel("Mean predicted CTR")
+    axis.set_ylabel("Observed click frequency")
+    axis.set_xlim(0.0, upper)
+    axis.set_ylim(0.0, upper)
+    axis.grid(alpha=0.25)
+    axis.legend()
     figure.tight_layout()
     figure.savefig(destination, dpi=150)
     plt.close(figure)
