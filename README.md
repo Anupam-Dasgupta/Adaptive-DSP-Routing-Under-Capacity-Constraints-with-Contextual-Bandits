@@ -1,6 +1,6 @@
 # Adaptive DSP Routing Under Capacity Constraints
 
-A compact, interview-defensible experiment in contextual routing on real mobile-ad
+A compact experiment in contextual routing on real mobile-ad
 traffic. Avazu rows provide chronological request contexts; downstream DSP behavior,
 costs, capacities, and rewards are simulated because Avazu does **not** contain
 multi-DSP counterfactual outcomes.
@@ -46,9 +46,6 @@ The current implementation contains:
 
 See [PLAN.md](PLAN.md) for the inspected schema and project phases, and
 [`docs/methodology.md`](docs/methodology.md) for the model and evaluation details.
-The [seven-day learning guide](docs/learning_guide.md) explains the project in study
-order, and [resume_bullets.md](docs/resume_bullets.md) contains evidence-backed bullet
-points.
 
 ## Setup
 
@@ -158,7 +155,7 @@ src/adaptive_dsp_routing/policies.py    baselines, linear bandits, pacing
 src/adaptive_dsp_routing/evaluation.py  runner, oracle, metrics
 src/adaptive_dsp_routing/plotting.py    Matplotlib comparison plots
 experiments/                            runnable stationary and drift checks
-experiments/run_suite.py                paired resume experiment suite
+experiments/run_suite.py                paired multi-seed experiment suite
 experiments/run_ctr_anchored.py         data-anchored robustness experiment
 tests/                                  scientific invariants
 ```

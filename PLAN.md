@@ -113,9 +113,9 @@ includes capacity ratios 0.2/0.4/0.6 and discount factors
 - Cumulative realized profit and pseudo-regret.
 - Gross value, serving cost, utilization, routing efficiency, and zero violations.
 - Rolling post-drift performance with an explicit recovery definition.
-- Interview-facing explanation and resume bullets only after measured results exist.
+- Publish consolidated findings only after measured results exist.
 
-### Optional extension — CTR-anchored DSP world (feature branch)
+### Extension — CTR-anchored DSP world
 
 - Fit logistic regression on the chronological training prefix using the existing
   leakage-safe features.

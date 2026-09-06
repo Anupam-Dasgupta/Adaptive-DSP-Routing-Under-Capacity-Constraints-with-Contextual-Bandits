@@ -398,7 +398,7 @@ def main() -> None:
     figures_dir = ROOT / "results" / "figures"
     metrics_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
-    raw.to_csv(metrics_dir / "resume_experiments_raw.csv", index=False)
+    raw.to_csv(metrics_dir / "experiment_runs_raw.csv", index=False)
     capacity_summary.to_csv(metrics_dir / "capacity_summary.csv", index=False)
     drift_summary.to_csv(metrics_dir / "drift_summary.csv", index=False)
     write_report(
