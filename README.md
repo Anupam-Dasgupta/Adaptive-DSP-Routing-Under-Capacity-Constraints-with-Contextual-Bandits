@@ -9,7 +9,24 @@ The scientific question is whether an online contextual policy can use scarce DS
 capacity more profitably than static routing, particularly after DSP preferences
 change.
 
-## Current milestone
+## At a glance
+
+| | |
+|---|---|
+| Data | 1,000,000 real Avazu mobile-ad contexts in chronological order |
+| Decision problem | Independent request routing with partial feedback and DSP capacity limits |
+| Main methods | Random, contextual Greedy, LinUCB, and Discounted LinUCB |
+| Headline result | LinUCB delivered 17.3% more mean profit than Random at 40% capacity |
+| Evaluation | 45 paired runs; 78.8% lower pseudo-regret; zero capacity violations |
+| Verification | 15 automated tests covering leakage, feedback, capacity, and reproducibility |
+
+![Capacity sweep](results/figures/capacity_sweep.png)
+
+The CTR-anchored robustness experiment and its feature ablation are reported
+separately below. All profit results come from disclosed semi-synthetic DSP outcomes,
+not a production deployment.
+
+## What is included
 
 The current implementation contains:
 
@@ -53,6 +70,8 @@ data/raw/avazu_test.parquet
 They are intentionally ignored by Git. Despite their names, these files are random
 partitions of the same labeled 1,000,000-row sample, not a chronological train/test
 split. The loader recombines them before ordering and splitting.
+
+See [`data/README.md`](data/README.md) for the exact source and acquisition steps.
 
 ## Run
 
@@ -115,8 +134,6 @@ and LinUCB changed by -0.8 ± 106.8. The score therefore added no stable increme
 benefit; the original features already contained the inputs used to compute it. This
 negative result helps separate the value of the CTR-anchored environment from the
 value of exposing the model score directly to the router.
-
-![Capacity sweep](results/figures/capacity_sweep.png)
 
 ![Abrupt drift comparison](results/figures/drift_comparison.png)
 
