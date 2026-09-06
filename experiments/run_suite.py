@@ -104,6 +104,39 @@ def append_ctr_results(lines: list[str], metrics_dir: Path) -> None:
             ]
         )
 
+    ablation_path = metrics_dir / "ctr_feature_ablation.csv"
+    if not ablation_path.is_file():
+        return
+    ablation = pd.read_csv(ablation_path)
+    lines.extend(
+        [
+            "",
+            "### CTR routing-feature ablation",
+            "",
+            "The paired runs use the same CTR-anchored world and differ only in",
+            "whether the router receives the out-of-sample CTR score.",
+            "",
+            "| Policy | Profit without CTR | Profit with CTR | Paired profit gain | "
+            "Regret without CTR | Regret with CTR | Paired regret reduction |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for row in ablation.itertuples():
+        lines.append(
+            f"| {row.policy} | {row.without_ctr_profit_mean:.1f} | "
+            f"{row.with_ctr_profit_mean:.1f} | {row.profit_gain_mean:.1f} ± "
+            f"{row.profit_gain_std:.1f} | {row.without_ctr_regret_mean:.1f} | "
+            f"{row.with_ctr_regret_mean:.1f} | "
+            f"{row.regret_reduction_mean:.1f} ± {row.regret_reduction_std:.1f} |"
+        )
+    lines.extend(
+        [
+            "",
+            "The CTR score produced no stable incremental profit improvement. Its",
+            "inputs were already present in the original routing features.",
+        ]
+    )
+
 
 def capacity_limits(ratio: float, n_dsps: int, window_size: int) -> np.ndarray:
     """Create heterogeneous DSP limits with the requested mean ratio."""

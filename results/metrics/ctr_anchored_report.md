@@ -29,6 +29,21 @@ Capacity ratio: 0.40; paired seeds: 42, 43, 44
 - LinUCB minus Random: 18694.0 ± 2619.4 (80.3% of Random mean).
 - LinUCB minus Greedy: 6655.1 ± 6892.1.
 
+## CTR routing-feature ablation
+
+The DSP world, capacities, seeds, and policies are identical. Only the
+out-of-sample CTR score is hidden from or shown to the router. Positive
+paired differences mean that exposing the CTR feature helped.
+
+| Policy | Profit without CTR | Profit with CTR | Paired profit gain | Regret without CTR | Regret with CTR | Paired regret reduction |
+|---|---:|---:|---:|---:|---:|---:|
+| Greedy | 35273.6 | 35330.8 | 57.2 ± 699.2 | 8113.0 | 8047.7 | 65.3 ± 689.3 |
+| LinUCB | 41986.7 | 41985.9 | -0.8 ± 106.8 | 1508.6 | 1586.4 | -77.8 ± 26.8 |
+
+The added CTR score produced no stable profit improvement: Greedy's small mean gain
+was dominated by seed variation, while LinUCB was effectively unchanged. The
+original features already contain the inputs from which the CTR score is computed.
+
 ## Interpretation boundary
 
 The CTR metrics use real held-out Avazu labels. DSP outcomes remain

@@ -12,6 +12,7 @@ results/metrics/*
 !results/metrics/ctr_anchored_raw.csv
 !results/metrics/ctr_anchored_summary.csv
 !results/metrics/ctr_anchored_report.md
+!results/metrics/ctr_feature_ablation.csv
 results/figures/*
 !results/figures/.gitkeep
 !results/figures/capacity_sweep.png

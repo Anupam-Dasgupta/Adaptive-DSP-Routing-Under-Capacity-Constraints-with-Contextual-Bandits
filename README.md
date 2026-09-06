@@ -109,6 +109,13 @@ capacity, LinUCB produced 80.3% more mean net profit than Random with zero capac
 violations. This is a robustness result in a semi-synthetic world, not production
 uplift.
 
+A paired ablation then hid or exposed the CTR score while holding the DSP world and
+all other settings fixed. Greedy's mean profit changed by only 57.2 ± 699.2 units,
+and LinUCB changed by -0.8 ± 106.8. The score therefore added no stable incremental
+benefit; the original features already contained the inputs used to compute it. This
+negative result helps separate the value of the CTR-anchored environment from the
+value of exposing the model score directly to the router.
+
 ![Capacity sweep](results/figures/capacity_sweep.png)
 
 ![Abrupt drift comparison](results/figures/drift_comparison.png)

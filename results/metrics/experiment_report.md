@@ -62,3 +62,16 @@ out-of-sample CTR prediction as a shared relevance prior for the synthetic DSP w
 
 LinUCB's mean profit was 80.3% above Random in this robustness experiment. DSP
 outcomes remain synthetic and three seeds do not support a production-uplift claim.
+
+### CTR routing-feature ablation
+
+The paired runs use the same CTR-anchored world and differ only in whether the
+router receives the out-of-sample CTR score.
+
+| Policy | Profit without CTR | Profit with CTR | Paired profit gain | Regret without CTR | Regret with CTR | Paired regret reduction |
+|---|---:|---:|---:|---:|---:|---:|
+| Greedy | 35273.6 | 35330.8 | 57.2 ± 699.2 | 8113.0 | 8047.7 | 65.3 ± 689.3 |
+| LinUCB | 41986.7 | 41985.9 | -0.8 ± 106.8 | 1508.6 | 1586.4 | -77.8 ± 26.8 |
+
+The CTR score produced no stable incremental profit improvement. Its inputs were
+already present in the original routing features.

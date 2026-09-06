@@ -40,9 +40,45 @@ def capacity_limits(ratio: float, n_dsps: int, window_size: int) -> np.ndarray:
     return np.clip(values, 1, window_size).astype("int64")
 
 
+def summarize_ablation(raw: pd.DataFrame) -> pd.DataFrame:
+    """Compare paired runs with and without the CTR routing feature."""
+
+    rows: list[dict[str, float | str]] = []
+    for policy in ("Greedy", "LinUCB"):
+        policy_rows = raw[raw["policy"] == policy]
+        profit = policy_rows.pivot(
+            index="seed", columns="feature_set", values="net_profit"
+        )
+        regret = policy_rows.pivot(
+            index="seed", columns="feature_set", values="pseudo_regret"
+        )
+        required = {"without_ctr", "with_ctr"}
+        if not required.issubset(profit.columns) or not required.issubset(
+            regret.columns
+        ):
+            raise ValueError(f"Incomplete CTR ablation runs for {policy}.")
+        profit_gain = profit["with_ctr"] - profit["without_ctr"]
+        regret_reduction = regret["without_ctr"] - regret["with_ctr"]
+        rows.append(
+            {
+                "policy": policy,
+                "without_ctr_profit_mean": profit["without_ctr"].mean(),
+                "with_ctr_profit_mean": profit["with_ctr"].mean(),
+                "profit_gain_mean": profit_gain.mean(),
+                "profit_gain_std": profit_gain.std(ddof=1),
+                "without_ctr_regret_mean": regret["without_ctr"].mean(),
+                "with_ctr_regret_mean": regret["with_ctr"].mean(),
+                "regret_reduction_mean": regret_reduction.mean(),
+                "regret_reduction_std": regret_reduction.std(ddof=1),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def write_report(
     ctr_metrics: dict[str, float],
     summary: pd.DataFrame,
+    ablation: pd.DataFrame,
     raw: pd.DataFrame,
     output_path: Path,
     *,
@@ -86,7 +122,8 @@ def write_report(
             f"{row.capacity_violations_max:.0f} |"
         )
 
-    paired = raw.pivot(index="seed", columns="policy", values="net_profit")
+    primary = raw[raw["feature_set"] == "with_ctr"]
+    paired = primary.pivot(index="seed", columns="policy", values="net_profit")
     if {"LinUCB", "Random", "Greedy"}.issubset(paired.columns):
         random_difference = paired["LinUCB"] - paired["Random"]
         greedy_difference = paired["LinUCB"] - paired["Greedy"]
@@ -103,6 +140,37 @@ def write_report(
                 "",
             ]
         )
+    lines.extend(
+        [
+            "## CTR routing-feature ablation",
+            "",
+            "The DSP world, capacities, seeds, and policies are identical. Only the",
+            "out-of-sample CTR score is hidden from or shown to the router. Positive",
+            "paired differences mean that exposing the CTR feature helped.",
+            "",
+            "| Policy | Profit without CTR | Profit with CTR | Paired profit gain | "
+            "Regret without CTR | Regret with CTR | Paired regret reduction |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for row in ablation.itertuples():
+        lines.append(
+            f"| {row.policy} | {row.without_ctr_profit_mean:.1f} | "
+            f"{row.with_ctr_profit_mean:.1f} | {row.profit_gain_mean:.1f} ± "
+            f"{row.profit_gain_std:.1f} | {row.without_ctr_regret_mean:.1f} | "
+            f"{row.with_ctr_regret_mean:.1f} | "
+            f"{row.regret_reduction_mean:.1f} ± {row.regret_reduction_std:.1f} |"
+        )
+    lines.extend(
+        [
+            "",
+            "The added CTR score produced no stable profit improvement: Greedy's",
+            "small mean gain was dominated by seed variation, while LinUCB was",
+            "effectively unchanged. The original features already contain the inputs",
+            "from which the CTR score is computed.",
+            "",
+        ]
+    )
     lines.extend(
         [
             "## Interpretation boundary",
@@ -159,35 +227,66 @@ def main() -> None:
             n_dsps=args.n_dsps,
             seed=seed,
         )
-        policies = {
-            "Random": RandomPolicy(
-                args.n_dsps, args.capacity_ratio, seed=seed + 10_000
-            ),
-            "Greedy": GreedyLinearPolicy(
-                args.n_dsps, routing_features.shape[1], pacer=pacer()
-            ),
-            "LinUCB": LinearUCBPolicy(
-                args.n_dsps,
-                routing_features.shape[1],
-                alpha=args.alpha,
-                pacer=pacer(),
-            ),
+        random_result = run_policy(
+            routing_features,
+            world,
+            RandomPolicy(args.n_dsps, args.capacity_ratio, seed=seed + 10_000),
+            capacities=capacities,
+            window_size=args.window_size,
+        )
+        rows.append(
+            {
+                "policy": "Random",
+                "feature_set": "with_ctr",
+                "seed": seed,
+                **random_result.summary(),
+            }
+        )
+        if seed == args.seeds[0]:
+            first_results["Random"] = random_result
+        print(f"seed={seed} policy=Random feature_set=with_ctr done")
+
+        feature_sets = {
+            "without_ctr": base_features,
+            "with_ctr": routing_features,
         }
-        for name, policy in policies.items():
-            result = run_policy(
-                routing_features,
-                world,
-                policy,
-                capacities=capacities,
-                window_size=args.window_size,
-            )
-            rows.append({"policy": name, "seed": seed, **result.summary()})
-            if seed == args.seeds[0]:
-                first_results[name] = result
-            print(f"seed={seed} policy={name} done")
+        for feature_set, policy_features in feature_sets.items():
+            policies = {
+                "Greedy": GreedyLinearPolicy(
+                    args.n_dsps, policy_features.shape[1], pacer=pacer()
+                ),
+                "LinUCB": LinearUCBPolicy(
+                    args.n_dsps,
+                    policy_features.shape[1],
+                    alpha=args.alpha,
+                    pacer=pacer(),
+                ),
+            }
+            for name, policy in policies.items():
+                result = run_policy(
+                    policy_features,
+                    world,
+                    policy,
+                    capacities=capacities,
+                    window_size=args.window_size,
+                )
+                rows.append(
+                    {
+                        "policy": name,
+                        "feature_set": feature_set,
+                        "seed": seed,
+                        **result.summary(),
+                    }
+                )
+                if seed == args.seeds[0] and feature_set == "with_ctr":
+                    first_results[name] = result
+                print(
+                    f"seed={seed} policy={name} feature_set={feature_set} done"
+                )
 
     raw = pd.DataFrame(rows)
-    summary = raw.groupby("policy", as_index=False).agg(
+    primary = raw[raw["feature_set"] == "with_ctr"]
+    summary = primary.groupby("policy", as_index=False).agg(
         net_profit_mean=("net_profit", "mean"),
         net_profit_std=("net_profit", "std"),
         pseudo_regret_mean=("pseudo_regret", "mean"),
@@ -196,6 +295,7 @@ def main() -> None:
         capacity_utilization_std=("capacity_utilization", "std"),
         capacity_violations_max=("capacity_violations", "max"),
     )
+    ablation = summarize_ablation(raw)
 
     metrics_dir = ROOT / "results" / "metrics"
     figures_dir = ROOT / "results" / "figures"
@@ -207,9 +307,11 @@ def main() -> None:
     )
     raw.to_csv(metrics_dir / "ctr_anchored_raw.csv", index=False)
     summary.to_csv(metrics_dir / "ctr_anchored_summary.csv", index=False)
+    ablation.to_csv(metrics_dir / "ctr_feature_ablation.csv", index=False)
     write_report(
         ctr_metrics,
         summary,
+        ablation,
         raw,
         metrics_dir / "ctr_anchored_report.md",
         total_events=len(events),
@@ -224,6 +326,7 @@ def main() -> None:
     )
     print(json.dumps(ctr_metrics, indent=2))
     print(summary.to_string(index=False))
+    print(ablation.to_string(index=False))
 
 
 if __name__ == "__main__":

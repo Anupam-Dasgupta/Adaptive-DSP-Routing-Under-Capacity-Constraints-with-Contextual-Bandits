@@ -126,6 +126,8 @@ includes capacity ratios 0.2/0.4/0.6 and discount factors
 - Preserve the methodological boundary: `click` is a supervised target, never an
   input feature or a DSP-specific reward.
 - Compare Random, Greedy, and LinUCB under paired seeds at 40% mean capacity.
+- Ablate the CTR routing feature on the identical paired worlds so its incremental
+  value is measured separately from the effect of changing the simulator.
 
 ## Scientific invariants
 

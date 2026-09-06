@@ -132,3 +132,9 @@ why `click` is valid as the supervised model's target but invalid as an input fe
 or as the reward for every DSP. Also explain why chronological out-of-sample
 predictions avoid future-label leakage and why calibration matters when a predicted
 probability becomes an input to a downstream decision system.
+
+The feature ablation found no stable incremental profit from exposing the CTR score.
+Be ready to explain why this is plausible: the score is a deterministic function of
+the original features, so it adds a compact nonlinear transformation rather than new
+information. Do not reinterpret this negative result as evidence that CTR modelling
+is useless; its separate role is to anchor the simulated DSP response propensity.

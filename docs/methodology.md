@@ -53,6 +53,12 @@ and conditional-value preferences, serving cost, and sampled feedback. This make
 the simulated world respond to an observed data signal without pretending that one
 Avazu click is a counterfactual outcome from every DSP.
 
+The feature ablation holds the generated world, costs, capacities, seeds, policy
+hyperparameters, and event order fixed. Greedy and LinUCB are each evaluated with the
+original feature matrix and with the appended CTR score. Paired profit gain and
+pseudo-regret reduction therefore isolate the value of exposing that score to the
+router; they do not measure the separate effect of changing the reward simulator.
+
 ## Synthetic DSP worlds
 
 The linear world computes one latent score per DSP and converts it to a positive
