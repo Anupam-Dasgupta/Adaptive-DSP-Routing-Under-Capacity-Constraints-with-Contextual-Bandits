@@ -1,8 +1,20 @@
-# Data
-data/*.parquet
-data/*.csv
-data/*.json
-data/*.zip
+# Local data and generated artifacts
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+results/metrics/*
+!results/metrics/.gitkeep
+!results/metrics/capacity_summary.csv
+!results/metrics/drift_summary.csv
+!results/metrics/experiment_report.md
+results/figures/*
+!results/figures/.gitkeep
+!results/figures/capacity_sweep.png
+!results/figures/drift_comparison.png
+work/
+tmp/
+*.pdf
 
 # Python
 __pycache__/
